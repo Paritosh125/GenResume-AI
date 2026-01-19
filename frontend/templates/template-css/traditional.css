@@ -1,0 +1,71 @@
+.resume-template.traditional .traditional-resume {
+    max-width: 850px;
+    margin: auto;
+    font-family: "Times New Roman", Georgia, serif;
+    color: #111;
+    line-height: 1.65;
+    background: #ffffff;
+}
+
+/* ===== HEADER ===== */
+
+.resume-template.traditional .traditional-header {
+    margin-bottom: 32px;
+    border-bottom: 3px solid #aaaaaa;
+}
+
+.resume-template.traditional .traditional-header h1 {
+    font-size: 32px;
+    margin-bottom: 6px;
+}
+
+.resume-template.traditional .traditional-contact {
+    font-size: 14px;
+    color: #444;
+}
+
+/* ===== SECTIONS ===== */
+
+.resume-template.traditional .traditional-resume section {
+    margin-bottom: 30px;
+    page-break-inside: avoid;
+}
+
+.resume-template.traditional .traditional-resume h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #aaa;
+    padding-bottom: 4px;
+}
+
+/* ===== CONTENT ===== */
+
+.resume-template.traditional .traditional-resume p {
+    font-size: 15px;
+    margin-bottom: 6px;
+}
+
+.resume-template.traditional .traditional-resume .item {
+    margin-bottom: 14px;
+}
+
+.resume-template.traditional .traditional-resume .item h3 {
+    font-size: 15.5px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.resume-template.traditional .traditional-resume .meta {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 4px;
+    display: block;
+}
+
+/* ===== PRINT (SCOPED) ===== */
+
+@media print {
+    .resume-template.traditional {
+        background: none;
+    }
+}

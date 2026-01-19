@@ -1,0 +1,95 @@
+.resume-template.clean-professional * {
+    box-sizing: border-box;
+}
+
+.resume-template.clean-professional {
+    background: #f8fafc;
+    padding: 40px 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #222;
+}
+
+/* Resume container */
+.resume-template.clean-professional .resume {
+    width: 800px;
+    margin: auto;
+    background: #ffffff;
+    padding: 40px 50px;
+}
+
+/* Header */
+.resume-template.clean-professional .header {
+    text-align: center;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 15px;
+    margin-bottom: 30px;
+}
+
+.resume-template.clean-professional .header h1 {
+    margin: 0;
+    font-size: 30px;
+    letter-spacing: 0.5px;
+    color: #0f172a;
+}
+
+.resume-template.clean-professional .contact {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #555;
+}
+
+/* Sections */
+.resume-template.clean-professional section {
+    margin-bottom: 26px;
+    page-break-inside: avoid;
+}
+
+.resume-template.clean-professional section h2 {
+    font-size: 18px;
+    color: #0f172a;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+}
+
+/* Summary */
+.resume-template.clean-professional .summary {
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Skills */
+.resume-template.clean-professional .skills p {
+    margin: 6px 0;
+    font-size: 14px;
+}
+
+/* Education */
+.resume-template.clean-professional .education p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Items (projects, experience, etc.) */
+.resume-template.clean-professional .item {
+    margin-bottom: 14px;
+}
+
+.resume-template.clean-professional .item h3 {
+    margin: 0;
+    font-size: 15px;
+    color: #111827;
+}
+
+.resume-template.clean-professional .item p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.resume-template.clean-professional .meta {
+    font-size: 13px;
+    color: #555;
+}

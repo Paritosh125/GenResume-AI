@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Two Column Resume</title>
+    <link rel="stylesheet" href="./templates/template-css/two-column.css">
+</head>
+
+<body>
+
+    <div class="resume-template two-column">
+        <div class="tc-resume">
+
+            <!-- HEADER -->
+            <div class="tc-header">
+                <h1 class="tc-name">{{FULL_NAME}}</h1>
+                <p class="tc-contact">
+                    {{EMAIL}} | {{PHONE}} | {{LINKEDIN}} | {{GITHUB}}
+                </p>
+            </div>
+
+            <!-- BODY -->
+            <div class="tc-body">
+
+                <!-- LEFT COLUMN -->
+                <div class="tc-left">
+
+                    {{SKILLS}}
+
+                    {{CERTIFICATIONS}}
+
+                    {{ACHIEVEMENTS}}
+
+                </div>
+
+                <!-- RIGHT COLUMN -->
+                <div class="tc-right">
+
+                    {{SUMMARY}}
+
+                    {{EXPERIENCE}}
+
+                    {{PROJECTS}}
+
+                    {{EDUCATION}}
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>

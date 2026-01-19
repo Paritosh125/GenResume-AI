@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>GenResume AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+    <!-- APP WRAPPER -->
+    <div class="app">
+
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-container">
+
+                <div class="brand">
+                    <span class="brand-name">GenResume</span>
+                    <span class="brand-ai">AI</span>
+                </div>
+
+                <nav class="header-nav">
+                    <a href="#templates">Templates</a>
+                    <a href="#form-section" class="primary-btn">
+                        Get Started
+                    </a>
+                </nav>
+
+            </div>
+        </header>
+
+
+        <!-- HERO SECTION -->
+        <section class="hero">
+            <div class="hero-container">
+
+                <!-- LEFT CONTENT -->
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        Build <span>ATS-Friendly</span><br />
+                        Resumes with AI
+                    </h1>
+
+                    <p class="hero-subtitle">
+                        Create professional, recruiter-approved resumes in minutes.
+                        Choose from clean templates, powered by AI.
+                    </p>
+
+                    <button class="hero-cta" id="heroStartBtn">
+                        Build My Resume →
+                    </button>
+                </div>
+
+                <!-- RIGHT COLLAGE -->
+                <div class="hero-visual">
+                    <img src="assets/previews/two-column-hero.png" class="resume-card card-1" />
+                    <img src="assets/previews/simple-ats.jpeg" class="resume-card card-2" />
+                    <img src="assets/previews/minimalist.jpeg" class="resume-card card-3" />
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TEMPLATE SELECTION -->
+        <section id="templates" class="templates-section">
+            <h2 class="section-title">Choose Your Resume Template</h2>
+            <p class="section-subtitle">
+                Pick a professionally designed resume layout. You can switch anytime.
+            </p>
+
+            <div class="template-grid">
+
+                <!-- Simple ATS (default selected) -->
+                <div class="template-card selected" data-template="simple-ats">
+                    <div class="template-image">
+                        <img src="assets/previews/simple-ats.jpeg" alt="Simple ATS Resume">
+                    </div>
+                    <div class="template-content">
+                        <h3>Simple ATS</h3>
+                        <h4 class="template-short">Freshers & campus placements</h4>
+                        <p class="template-description">Single-column, ATS-safe resume focused purely on clarity and
+                            recruiter readability.</p>
+                    </div>
+                </div>
+
+                <div class="template-card" data-template="clean-professional">
+                    <div class="template-image">
+                        <img src="assets/previews/clean-professional.png" alt="Clean Professional Resume">
+                    </div>
+                    <div class="template-content">
+                        <h3>Clean Professional</h3>
+                        <h4 class="template-short">Corporate roles & formal companies</h4>
+                        <p class="template-description">Polished single-column layout with subtle spacing and colors for
+                            a refined, professional look.</p>
+                    </div>
+                </div>
+
+                <div class="template-card" data-template="two-column">
+                    <div class="template-image">
+                        <img src="assets/previews/two-column.png" alt="Two Column Resume">
+                    </div>
+                    <div class="template-content">
+                        <h3>Two Column</h3>
+                        <h4 class="template-short">Developers & mid-level professionals</h4>
+                        <p class="template-description">Structured two-column design separating skills and experience
+                            for better visual balance. </p>
+                    </div>
+                </div>
+
+                <div class="template-card" data-template="minimalist">
+                    <div class="template-image">
+                        <img src="assets/previews/minimalist.jpeg" alt="Minimalist Resume">
+                    </div>
+                    <div class="template-content">
+                        <h3>Minimalist</h3>
+                        <h4 class="template-short">Startups & modern tech roles</h4>
+                        <p class="template-description">Clean, whitespace-heavy design that highlights content with
+                            minimal visual noise.</p>
+                    </div>
+                </div>
+
+                <div class="template-card" data-template="traditional">
+                    <div class="template-image">
+                        <img src="assets/previews/traditional.png" alt="Traditional Resume">
+                    </div>
+                    <div class="template-content">
+                        <h3>Traditional</h3>
+                        <h4 class="template-short">Academia & government roles</h4>
+                        <p class="template-description">Classic, formal resume with traditional typography and section
+                            styling.</p>
+                    </div>
+                </div>
+
+                <div class="template-card" data-template="experienced">
+                    <div class="template-image">
+                        <img src="assets/previews/experienced.png" alt="Experienced Resume">
+                    </div>
+                    <div class="template-content">
+                        <h3>Experienced</h3>
+                        <h4 class="template-short">Senior & experienced professionals</h4>
+                        <p class="template-description">Strong section emphasis designed to showcase experience,
+                            leadership, and impact.</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- BUILDER -->
+        <section id="builder" class="builder-section">
+
+            <!-- ===== FORM ===== -->
+            <div class="form-card" id="form-section">
+
+                <div class="form-header">
+                    <h2>Build Your Resume</h2>
+                    <p>Fill in your details — AI will optimize everything for ATS</p>
+                </div>
+
+                <form id="resumeForm" novalidate>
+
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input type="text" id="fullName" placeholder="Alex Johnson" required />
+                        <span class="error hidden"></span>
+                    </div>
+
+
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" id="email" placeholder="alex@mail.com" required />
+                            <span class="error hidden"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Phone *</label>
+                            <input type="tel" id="phone" required pattern="[0-9]{10}" maxlength="10" inputmode="numeric"
+                                placeholder="10 digit mobile number" />
+                            <span class="error hidden"></span>
+                        </div>
+
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>LinkedIn</label>
+                            <input type="url" id="linkedin" placeholder="linkedin.com/in/name" />
+                        </div>
+                        <div class="form-group">
+                            <label>GitHub</label>
+                            <input type="url" id="github" placeholder="github.com/yourusername" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Professional Summary *</label>
+                        <textarea id="about" rows="4" required></textarea>
+                        <span class="error hidden"></span>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label>Skills *</label>
+                        <textarea id="skills" rows="2" required
+                            placeholder="e.g. HTML, CSS, JavaScript, React, Node.js"></textarea>
+                        <span class="error hidden"></span>
+                    </div>
+
+
+                    <!-- <div class="form-divider">Optional Sections</div> -->
+
+                    <div class="form-group">
+                        <label>Projects</label>
+                        <div id="project-section"></div>
+                        <button type="button" id="addProjectBtn" class="btn-outline">+ Add Project</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Experience</label>
+                        <div id="experience-section"></div>
+                        <button type="button" id="addExperienceBtn" class="btn-outline">+ Add Experience</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Education *</label>
+                        <div id="education-section"></div>
+                        <button type="button" id="addEducationBtn" class="btn-outline">+ Add Education</button>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Certifications</label>
+                            <div id="certification-section"></div>
+                            <button type="button" id="addCertificationBtn" class="btn-outline">+ Add
+                                Certification</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Achievements</label>
+                            <div id="achievement-section"></div>
+                            <button type="button" id="addAchievementBtn" class="btn-outline">+ Add Achievement</button>
+                        </div>
+                    </div>
+
+                    <div class="form-action">
+                        <button type="button" id="generateBtn" class="btn-primary-large">
+                            🚀 Generate Resume
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </section>
+
+        <!-- PREVIEW -->
+        <section id="preview" class="preview-section">
+            <div class="preview-header">
+                <h2>Resume Preview</h2>
+                <p>This is exactly how your resume will be exported</p>
+            </div>
+
+            <div id="resumePreview" class="preview-canvas">
+                <p class="muted">No resume generated yet.</p>
+                <div class="resume-template template-one"></div>
+            </div>
+
+            <div class="preview-action">
+                <button id="downloadPdfBtn" class="btn-primary">
+                    ⬇ Download PDF
+                </button>
+            </div>
+        </section>
+
+        <!-- ATS INPUT (HIDDEN INITIALLY) -->
+        <section id="ats-input-section" class="ats-input hidden">
+            <h3>Check ATS Match</h3>
+
+            <div class="ats-input-row">
+                <input type="text" id="atsRoleInput" placeholder="Enter target job role (e.g. Frontend Developer)" />
+                <button id="checkAtsBtn" disabled>
+                    Check ATS Score
+                </button>
+            </div>
+
+            <p id="atsError" class="ats-error hidden"></p>
+        </section>
+
+        <!-- ATS OUTPUT -->
+        <section id="ats-output-section" class="ats-wrapper hidden">
+            <div class="ats-card">
+
+                <div class="ats-header">
+                    <h2>ATS Match Score</h2>
+                    <p>AI-based resume screening result</p>
+                </div>
+
+                <div class="ats-score">
+                    <span id="atsScore">–</span>
+                    <small>/100</small>
+                </div>
+
+                <div class="ats-suggestions">
+                    <h3>Improvement Suggestions</h3>
+                    <div id="atsSuggestions"></div>
+                </div>
+
+            </div>
+        </section>
+
+
+
+        <!-- FOOTER -->
+        <footer class="footer">
+            <div class="footer-content">
+                <h3 class="footer-brand">GenResume AI</h3>
+                <p class="footer-tagline">
+                    Smart resumes. ATS-ready. AI-powered.
+                </p>
+                <p class="footer-copy">
+                    © 2026 GenResume AI
+                </p>
+            </div>
+        </footer>
+
+
+
+    </div>
+    <!-- END APP -->
+
+
+    <!-- SCRIPTS -->
+    <!-- pdf lib -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- small inline script to make cards clickable (keeps your app.js unchanged) -->
+    <script>
+        // delegate clicks: clicking anywhere on the card triggers the internal button click (if present),
+        // otherwise toggles selected class and triggers existing template-button listeners.
+        document.addEventListener("click", function (e) {
+            const card = e.target.closest(".template-card");
+            if (!card) return;
+            // if user clicked a real button inside card, let that bubble
+            if (e.target.tagName === "BUTTON") return;
+            const btn = card.querySelector("button");
+            if (btn) {
+                btn.click();
+            } else {
+                // fallback: toggle selected class (so UI feels interactive even without button)
+                document.querySelectorAll(".template-card").forEach(c => c.classList.remove("selected"));
+                card.classList.add("selected");
+            }
+        });
+    </script>
+
+    <!-- for hero section -->
+    <script>
+        // smooth scroll for hero CTA
+        document.getElementById("heroStartBtn").addEventListener("click", () => {
+            document.getElementById("form-section").scrollIntoView({
+                behavior: "smooth"
+            });
+        });
+
+    </script>
+
+
+    <!-- your app logic (unchanged) -->
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>

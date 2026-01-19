@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Minimalist Resume</title>
+    <link rel="stylesheet" href="./templates/template-css/minimalist.css">
+</head>
+
+<body>
+    <div class="resume-template minimalist">
+        <div class="min-resume">
+
+            <header class="min-header">
+                <h1>{{FULL_NAME}}</h1>
+                <p class="min-contact">
+                    {{EMAIL}} · {{PHONE}} · {{LINKEDIN}} · {{GITHUB}}
+                </p>
+            </header>
+
+            <section class="min-section">
+                <h2>Summary</h2>
+                <p>{{SUMMARY}}</p>
+            </section>
+
+            <section class="min-section">
+                <h2>Skills</h2>
+                {{SKILLS}}
+            </section>
+
+            <section class="min-section">
+                <h2>Education</h2>
+                {{EDUCATION}}
+            </section>
+
+            <section class="min-section">
+                {{PROJECTS}}
+            </section>
+
+            <section class="min-section">
+
+                {{EXPERIENCE}}
+            </section>
+
+            <section class="min-section">
+
+                {{CERTIFICATIONS}}
+            </section>
+
+            <section class="min-section">
+
+                {{ACHIEVEMENTS}}
+            </section>
+        </div>
+    </div>
+</body>
+
+</html>

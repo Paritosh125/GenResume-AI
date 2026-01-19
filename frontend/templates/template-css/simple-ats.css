@@ -1,0 +1,79 @@
+.resume-template.simple-ats * {
+    box-sizing: border-box;
+}
+
+.resume-template.simple-ats {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #ffffff;
+    color: #000;
+    padding: 20px;
+}
+
+/* Resume container */
+.resume-template.simple-ats .resume {
+    max-width: 800px;
+    margin: auto;
+}
+
+/* Header */
+.resume-template.simple-ats .header {
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.resume-template.simple-ats .header h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.resume-template.simple-ats .contact {
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+/* Sections */
+.resume-template.simple-ats section {
+    margin-bottom: 18px;
+}
+
+.resume-template.simple-ats h2 {
+    font-size: 16px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid #000;
+    padding-bottom: 2px;
+}
+
+.resume-template.simple-ats p {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 0 6px 0;
+}
+
+/* =========================
+   COMMON CONTENT BLOCKS
+========================= */
+
+.resume-template.simple-ats .item {
+    margin-bottom: 10px;
+}
+
+.resume-template.simple-ats .item h3 {
+    font-size: 14.5px;
+    font-weight: bold;
+    margin: 0 0 2px 0;
+}
+
+.resume-template.simple-ats .item p {
+    font-size: 14px;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.resume-template.simple-ats .meta {
+    display: block;
+    font-size: 13px;
+    font-style: italic;
+    margin-bottom: 3px;
+}

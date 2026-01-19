@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Traditional Academic Resume</title>
+    <link rel="stylesheet" href="./templates/template-css/traditional.css">
+</head>
+
+<body>
+    <div class="resume-template traditional">
+        <div class="traditional-resume">
+
+            <header class="traditional-header">
+                <h1>{{FULL_NAME}}</h1>
+                <p class="traditional-contact">
+                    {{EMAIL}} • {{PHONE}} • {{LINKEDIN}} • {{GITHUB}}
+                </p>
+            </header>
+
+            <section>
+                <h2>Professional Summary</h2>
+                <p>{{SUMMARY}}</p>
+            </section>
+
+            <section>
+                <h2>Skills</h2>
+                {{SKILLS}}
+            </section>
+
+            <section>
+                <h2>Education</h2>
+                {{EDUCATION}}
+            </section>
+
+            {{PROJECTS}}
+            {{EXPERIENCE}}
+            {{CERTIFICATIONS}}
+            {{ACHIEVEMENTS}}
+
+        </div>
+    </div>
+</body>
+
+</html>

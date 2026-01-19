@@ -1,0 +1,74 @@
+.resume-template.experienced *,
+.resume-template.experienced *::before,
+.resume-template.experienced *::after {
+    box-sizing: border-box;
+}
+
+/* ===== ROOT ===== */
+.resume-template.experienced .exp-resume {
+    max-width: 900px;
+    margin: auto;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: #ffffff;
+    color: #1a1a1a;
+    padding: 24px;
+}
+
+/* ===== HEADER ===== */
+.resume-template.experienced .exp-header {
+    border-bottom: 3px solid #222;
+    padding-bottom: 12px;
+    margin-bottom: 22px;
+}
+
+.resume-template.experienced .exp-header h1 {
+    font-size: 30px;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.resume-template.experienced .exp-contact {
+    font-size: 14px;
+    margin-top: 6px;
+    color: #444;
+}
+
+/* ===== SECTIONS ===== */
+.resume-template.experienced .exp-resume section {
+    margin-bottom: 22px;
+    padding-left: 14px;
+    border-left: 4px solid #e0e0e0;
+}
+
+.resume-template.experienced .exp-resume section h2 {
+    font-size: 17px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #222;
+}
+
+/* ===== TEXT ===== */
+.resume-template.experienced .exp-resume p {
+    font-size: 14.5px;
+    line-height: 1.6;
+    margin-bottom: 6px;
+}
+
+/* ===== ITEMS ===== */
+.resume-template.experienced .exp-resume .item {
+    margin-bottom: 14px;
+}
+
+.resume-template.experienced .exp-resume .item h3 {
+    font-size: 15px;
+    margin: 0 0 3px 0;
+    font-weight: 600;
+}
+
+.resume-template.experienced .exp-resume .meta {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 4px;
+}

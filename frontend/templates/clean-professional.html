@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Clean Professional Resume</title>
+    <link rel="stylesheet" href="./templates/template-css/clean-professional.css">
+</head>
+
+<body>
+
+    <div class="resume-template clean-professional">
+        <div class="resume">
+
+            <header class="header">
+                <h1>{{FULL_NAME}}</h1>
+                <p class="contact">
+                    {{EMAIL}} | {{PHONE}} | {{LINKEDIN}} | {{GITHUB}}
+                </p>
+            </header>
+
+            <section>
+                <h2>Professional Summary</h2>
+                <p class="summary">{{SUMMARY}}</p>
+            </section>
+
+            <section>
+                <h2>Skills</h2>
+                <div class="skills">
+                    {{SKILLS}}
+                </div>
+            </section>
+
+            <section>
+                <h2>Education</h2>
+                <div class="education">
+                    {{EDUCATION}}
+                </div>
+            </section>
+
+            {{PROJECTS}}
+            {{EXPERIENCE}}
+            {{CERTIFICATIONS}}
+            {{ACHIEVEMENTS}}
+
+
+        </div>
+    </div>
+
+</body>
+
+</html>

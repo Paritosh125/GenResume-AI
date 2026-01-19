@@ -1,0 +1,107 @@
+.resume-template.two-column .tc-resume {
+    max-width: 900px;
+    margin: auto;
+    background: #ffffff;
+    color: #111;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, Inter, Arial, sans-serif;
+}
+
+/* ================= HEADER ================= */
+
+.resume-template.two-column .tc-header {
+    text-align: center;
+    padding: 28px 20px 22px;
+    border-bottom: 2px solid #1f2937;
+}
+
+.resume-template.two-column .tc-name {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    margin: 0;
+}
+
+.resume-template.two-column .tc-contact {
+    margin-top: 8px;
+    font-size: 13.5px;
+    color: #374151;
+    line-height: 1.6;
+}
+
+/* ================= BODY ================= */
+
+.resume-template.two-column .tc-body {
+    display: flex;
+    min-height: 650px;
+}
+
+/* ================= LEFT (SIDEBAR) ================= */
+
+.resume-template.two-column .tc-left {
+    width: 32%;
+    background: #f4f6f8;
+    padding: 24px 20px;
+}
+
+/* ================= RIGHT ================= */
+
+.resume-template.two-column .tc-right {
+    width: 68%;
+    padding: 26px 28px;
+}
+
+/* ================= SECTIONS ================= */
+
+.resume-template.two-column .tc-section {
+    margin-bottom: 26px;
+}
+
+.resume-template.two-column .tc-section h2 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+    color: #111827;
+}
+
+/* ================= TEXT ================= */
+
+.resume-template.two-column .tc-section p {
+    font-size: 14.5px;
+    line-height: 1.65;
+    margin: 0 0 8px 0;
+    color: #111;
+}
+
+/* ================= ITEMS ================= */
+
+.resume-template.two-column .tc-item {
+    margin-bottom: 16px;
+}
+
+.resume-template.two-column .tc-item-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #111827;
+}
+
+.resume-template.two-column .tc-meta {
+    font-size: 13px;
+    color: #4b5563;
+    margin-bottom: 6px;
+}
+
+/* ================= SIDEBAR TWEAKS ================= */
+
+.resume-template.two-column .tc-left .tc-section {
+    margin-bottom: 22px;
+}
+
+.resume-template.two-column .tc-left .tc-section p {
+    font-size: 14px;
+    margin-bottom: 6px;
+    line-height: 1.55;
+}
