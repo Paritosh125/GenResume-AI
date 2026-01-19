@@ -319,7 +319,7 @@ document.querySelectorAll(".template-card").forEach(card => {
 
 //  AI CALL 
 async function callAI(type, payload) {
-    const response = await fetch("http://127.0.0.1:5000/ai/improve", {
+    const response = await fetch("https://genresume-ai.onrender.com/ai/improve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, payload })
@@ -586,7 +586,7 @@ checkAtsBtn.addEventListener("click", async () => {
     try {
         const resumeText = extractResumeText();
 
-        const res = await fetch("http://127.0.0.1:5000/ai/ats", {
+        const res = await fetch("https://genresume-ai.onrender.com/ai/ats", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ jobRole, resumeText })
