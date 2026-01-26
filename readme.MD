@@ -88,7 +88,7 @@ GenResume-AI/
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/genresume-ai.git
+git clone https://github.com/Paritosh125/genresume-ai.git
 cd genresume-ai
 ```
 
