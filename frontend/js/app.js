@@ -624,3 +624,19 @@ checkAtsBtn.addEventListener("click", async () => {
         checkAtsBtn.textContent = "Check ATS Score";
     }
 });
+
+
+//For Warming up render backend to prevent cold start 
+document.addEventListener("DOMContentLoaded", () => {
+    warmUpBackend();
+});
+
+function warmUpBackend() {
+    fetch("https://genresume-ai.onrender.com/health")
+        .then(() => {
+            console.log("Backend warmed up");
+        })
+        .catch((err) => {
+            console.warn("Backend wake-up failed:", err);
+        });
+}

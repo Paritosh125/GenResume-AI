@@ -89,6 +89,7 @@ Rules:
 - Do NOT include categories with no skills
 - Do NOT include soft skills, hobbies, or personal traits
 - Do NOT repeat skills across categories
+- Do NOT add tools if not provided in input
 - Classify conservatively and accurately
 - Capitalize first letter of each skill
 
