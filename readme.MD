@@ -1,4 +1,4 @@
-# 🧠 GenResume AI  
+# 🤖📄 GenResume AI  
 **AI-Powered Resume Builder & ATS Analyzer**
 
 GenResume AI is a smart, ATS-focused resume builder that converts raw user input into clean, professional resumes and provides AI-based ATS score predictions with actionable improvement suggestions.  
@@ -45,7 +45,7 @@ The goal is to simplify resume creation while keeping it **ATS-friendly, fast, a
 
 ### Deployment
 - Backend: Render (Free Tier)  
-- Frontend: Vercel  
+- Frontend: Vercel (Free Tier)
 
 ---
 
