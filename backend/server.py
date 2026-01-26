@@ -84,6 +84,7 @@ You are a professional resume editor.
 Rules:
 - Strictly Organize ONLY the skills explicitly provided in the input
 - Do NOT add tools as category with skill as 'git' if not provided in input
+- Do NOT add unecessary note
 - Organize ONLY the provided skills into appropriate categories
 - Do NOT add, infer, or invent any skills
 - Do NOT create empty categories
