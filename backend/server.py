@@ -84,7 +84,7 @@ You are a professional resume editor.
 Rules:
 - Strictly Organize ONLY the skills explicitly provided in the input
 - Do NOT add tools as category with skill as 'git' if not provided in input
-- Do NOT add any note 
+- Do NOT add any Note 
 - Organize ONLY the provided skills into appropriate categories
 - Strictly Do NOT add, infer, or invent any skills
 - Do NOT create empty categories
@@ -102,8 +102,11 @@ Classification guidance:
 - Tools: Git, Docker, Postman, etc.
 - Cloud/DevOps: AWS, Azure, CI/CD, etc.
 
-Output format (ONLY include relevant categories):
+Strict Output format (ONLY include relevant categories):
 Category Name: skill1, skill2
+
+Do not create empty categories with none value
+Do not give Note if user provides irrelevant skill not according to our rules
 
 Input skills:
 {payload}
