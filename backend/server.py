@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from openai import OpenAI
+import pdfplumber
 import os
 import json
 
@@ -265,6 +266,62 @@ Resume:
 
     except Exception as e:
         return jsonify({"error": "AI failure"}), 500
+    
+# 
+@app.route("/ai/ats-upload", methods=["POST"])
+def ats_upload():
+
+    file = request.files.get("resume")
+    job_role = request.form.get("jobRole")
+
+    if not file or not job_role:
+        return jsonify({"error": "Invalid input"}), 400
+
+    if not file.filename.endswith(".pdf"):
+        return jsonify({"error": "Only PDF allowed"}), 400
+
+    try:
+        # Extract text from PDF
+        with pdfplumber.open(file) as pdf:
+            resume_text = ""
+            for page in pdf.pages:
+                resume_text += page.extract_text() or ""
+
+        if not resume_text.strip():
+            return jsonify({"error": "Could not extract text"}), 400
+
+        prompt = f"""
+You are an ATS resume evaluator.
+
+Analyze the resume against the job role: "{job_role}"
+
+Return STRICT JSON ONLY in this format:
+{{
+  "ats_score": number (0-100),
+  "suggestions": [
+    {{
+      "title": "Short improvement title",
+      "detail": "Clear actionable improvement suggestion"
+    }}
+  ]
+}}
+
+Resume:
+{resume_text}
+"""
+
+        completion = client.chat.completions.create(
+            model="meta-llama/Llama-3.1-8B-Instruct:novita",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2
+        )
+
+        content = completion.choices[0].message.content.strip()
+        return jsonify(json.loads(content))
+
+    except Exception as e:
+        return jsonify({"error": "AI failure"}), 500
+
 
 
 
