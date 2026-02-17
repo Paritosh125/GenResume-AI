@@ -277,7 +277,10 @@ def ats_upload():
                 resume_text += page.extract_text() or ""
 
         if not resume_text.strip():
-            return jsonify({"error": "Could not extract text"}), 400
+            return jsonify({
+        "error": "This PDF appears to be image-based or scanned. Please upload a text-based PDF (exported from Word or Google Docs)."
+            }), 400
+
 
         prompt = f"""
 You are an ATS resume evaluator.
