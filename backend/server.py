@@ -54,8 +54,7 @@ STRICT RULES:
 - Keep output concise, professional, and ATS-friendly.
 """
 
-
-    # -------- SUMMARY --------
+    # (unchanged prompt branches)
     if prompt_type == "summary":
         return f"""
 You are a professional resume writer.
@@ -75,9 +74,6 @@ User summary:
 {payload}
 """
 
-
-
-    # -------- SKILLS (GROUPING LATER) --------
     if prompt_type == "skills":
         return f"""
 You are a professional resume editor.
@@ -113,8 +109,6 @@ Input skills:
 {payload}
 """
 
-
-    # -------- PROJECT (DESCRIPTION ONLY) --------
     if prompt_type == "project":
          return f"""{base_rules}
 
@@ -137,9 +131,6 @@ Text:
 {payload.get("description", "")}
 """
 
-
-
-    # -------- EXPERIENCE --------
     if prompt_type == "experience":
         return f"""{base_rules}
 
@@ -163,8 +154,6 @@ Text:
 {payload.get("description", "")}
 """
 
-
-    # -------- ACHIEVEMENT (TITLE + DESCRIPTION) --------
     if prompt_type == "achievement":
         return f"""{base_rules}
 
@@ -187,7 +176,6 @@ Achievement Title:
 Achievement Description:
 {payload.get("description", "")}
 """
-
 
     return None
 
@@ -265,7 +253,7 @@ Resume:
         return jsonify(json.loads(content))
 
     except Exception as e:
-        return jsonify({"error": "AI failure"}), 500
+        return jsonify({"error": "AI failure", "details": str(e)}), 500
     
 # 
 @app.route("/ai/ats-upload", methods=["POST"])
@@ -277,12 +265,13 @@ def ats_upload():
     if not file or not job_role:
         return jsonify({"error": "Invalid input"}), 400
 
-    if not file.filename.endswith(".pdf"):
+    # case-insensitive check for .pdf
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
         return jsonify({"error": "Only PDF allowed"}), 400
 
     try:
-        # Extract text from PDF
-        with pdfplumber.open(file) as pdf:
+        # Extract text from PDF using the file stream (works with Flask FileStorage)
+        with pdfplumber.open(file.stream) as pdf:
             resume_text = ""
             for page in pdf.pages:
                 resume_text += page.extract_text() or ""
@@ -320,12 +309,10 @@ Resume:
         return jsonify(json.loads(content))
 
     except Exception as e:
-        return jsonify({"error": "AI failure"}), 500
-
-
+        # keep error detail to help debugging (but be careful in production)
+        return jsonify({"error": "AI failure", "details": str(e)}), 500
 
 
 # ================= RUN =================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
-
