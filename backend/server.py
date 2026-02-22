@@ -257,152 +257,173 @@ Resume:
         return jsonify({"error": "AI failure", "details": str(e)}), 500
     
 # 
+import re
+import json
+import pdfplumber
+from flask import request, jsonify
+
 @app.route("/ai/ats-upload", methods=["POST"])
 def ats_upload():
-    """
-    Robust ATS upload endpoint:
-    - Validates job role (stronger heuristics + gibberish detection)
-    - Validates PDF presence and basic text extraction
-    - Detects template/artifact placeholders and returns structured warning
-    - Calls LLM only when inputs look sane
-    """
 
     file = request.files.get("resume")
     job_role = (request.form.get("jobRole") or "").strip()
 
     if not file or not job_role:
-        return jsonify({"error": "Invalid input", "detail": "Missing file or job role"}), 400
+        return jsonify({
+            "error": "Invalid input",
+            "detail": "Missing resume file or job role"
+        }), 400
 
-    # -----------------------
-    # Job-role validation
-    # -----------------------
-    def _is_gibberish(s: str) -> bool:
-        """Heuristic to detect random/gibberish strings (low vowel ratio, repeated chars)."""
-        letters = re.findall(r"[A-Za-z]", s)
+    # ==========================================================
+    # 🔒 STRONG JOB ROLE VALIDATION
+    # ==========================================================
+
+    def is_gibberish(text: str) -> bool:
+        letters = re.findall(r"[A-Za-z]", text)
         if not letters:
             return True
+
         vowels = sum(1 for c in letters if c.lower() in "aeiou")
         vowel_ratio = vowels / len(letters)
-        # if too few vowels (likely consonant mush) and tokens are short -> gibberish
-        tokens = re.findall(r"[A-Za-z]{2,}", s)
+
+        tokens = re.findall(r"[A-Za-z]{2,}", text.lower())
+
+        # Too few vowels + short tokens → likely nonsense
         if vowel_ratio < 0.25 and all(len(t) < 4 for t in tokens):
             return True
-        # repeated characters like "aaaa" or "xxx" are suspicious
-        if re.search(r"(.)\1\1", s):
+
+        # Repeated characters like "aaaa", "xxxx"
+        if re.search(r"(.)\1\1", text):
             return True
+
         return False
 
+
     def is_valid_job_role(role: str):
-        """
-        Returns (ok: bool, detail: str).
-        Rules (heuristics):
-        - Must contain alphabetic chars
-        - Reject common garbage tokens
-        - Accept immediately if contains known job tokens (developer, engineer, frontend, etc.)
-        - Accept if has 2+ meaningful words (length>=3)
-        - Accept single descriptive word length >= 5
-        - Reject gibberish (low vowel_ratio, repeated chars)
-        - Otherwise reject as "vague"
-        """
-        r = (role or "").strip()
-        if not r:
-            return False, "Empty job role"
+        r = role.strip()
 
         if not re.search(r"[A-Za-z]", r):
-            return False, "Job role should contain alphabetic characters"
+            return False, "Job role must contain alphabetic characters."
 
-        tokenized = re.findall(r"[A-Za-z]{2,}", r.lower())
-        if not tokenized:
-            return False, "Job role looks invalid"
+        tokens = re.findall(r"[A-Za-z]{2,}", r.lower())
 
-        # quick blacklist of obvious nonsense
-        blacklist = {"asd", "asdf", "aasd", "aasddas", "qwe", "qwerty", "testtest", "xyz", "lorem"}
-        if any(tok in blacklist for tok in tokenized):
-            return False, "Job role looks like random text"
+        if not tokens:
+            return False, "Invalid job role."
 
-        # whitelist / job tokens
-        job_tokens = {
-            "developer", "engineer", "manager", "designer", "analyst", "intern",
-            "frontend", "backend", "fullstack", "devops", "data", "software", "web", "mobile",
-            "product", "qa", "test", "research", "administrator", "architect", "consultant",
-            "security", "cloud", "mern", "react", "node", "android", "ios", "sde", "sdet", "pm"
+        blacklist = {
+            "asd", "asdf", "aasd", "aasddas",
+            "qwe", "qwerty", "xyz", "testtest"
         }
-        if any(tok in job_tokens for tok in tokenized):
+
+        if any(tok in blacklist for tok in tokens):
+            return False, "Job role looks like random text."
+
+        # Known job-related keywords
+        job_keywords = {
+            "developer", "engineer", "manager", "designer",
+            "analyst", "intern", "frontend", "backend",
+            "fullstack", "devops", "data", "software",
+            "web", "mobile", "product", "qa",
+            "cloud", "security", "mern", "react",
+            "node", "android", "ios", "architect"
+        }
+
+        if any(tok in job_keywords for tok in tokens):
             return True, ""
 
-        # meaningful words
-        meaningful = [tok for tok in tokenized if len(tok) >= 3 and tok not in {"the","and","for","with","in","of"}]
+        meaningful = [t for t in tokens if len(t) >= 3]
+
         if len(meaningful) >= 2:
             return True, ""
 
         if len(meaningful) == 1 and len(meaningful[0]) >= 5:
             return True, ""
 
-        # reject obvious gibberish
-        if _is_gibberish(r):
-            return False, "Job role looks like random or gibberish text"
+        if is_gibberish(r):
+            return False, "Job role appears to be gibberish."
 
-        return False, ("Job role looks vague or too short. Try examples like 'Frontend Developer', "
-                       "'Software Engineer', or 'Data Analyst'.")
+        return False, (
+            "Job role looks vague. Try examples like "
+            "'Frontend Developer', 'Software Engineer', or 'Data Analyst'."
+        )
 
-    ok, reason = is_valid_job_role(job_role)
-    if not ok:
-        return jsonify({"error": "Invalid job role", "detail": reason}), 400
+    valid, reason = is_valid_job_role(job_role)
+    if not valid:
+        return jsonify({
+            "error": "Invalid job role",
+            "detail": reason
+        }), 400
 
-    # -----------------------
-    # PDF check
-    # -----------------------
+    # ==========================================================
+    # 📄 PDF VALIDATION
+    # ==========================================================
+
     if not file.filename or not file.filename.lower().endswith(".pdf"):
-        return jsonify({"error": "Only PDF allowed"}), 400
+        return jsonify({"error": "Only PDF files are allowed."}), 400
 
     try:
-        # Extract text from PDF using the file stream (works with Flask FileStorage)
         with pdfplumber.open(file.stream) as pdf:
             resume_text = ""
             for page in pdf.pages:
                 resume_text += page.extract_text() or ""
 
-        resume_text = (resume_text or "").strip()
+        resume_text = resume_text.strip()
 
         if not resume_text:
             return jsonify({
-                "error": "This PDF appears to be image-based or scanned. Please upload a text-based PDF (exported from Word or Google Docs)."
+                "error": "This PDF appears to be image-based or scanned. "
+                         "Please upload a text-based PDF."
             }), 400
 
-        # -----------------------
-        # Basic resume sanity checks
-        # -----------------------
-        # Minimum length: short docs (e.g., 'cat dog') are rejected
+        # ==========================================================
+        # 🧠 BASIC RESUME SANITY CHECK
+        # ==========================================================
+
         if len(resume_text) < 300:
-            return jsonify({"error": "Resume content too short or invalid. Please upload a full resume."}), 400
+            return jsonify({
+                "error": "Resume content too short or invalid. "
+                         "Please upload a complete resume."
+            }), 400
 
-        # Basic presence of resume-like keywords (helps reject non-resume PDFs)
-        resume_signals = ["education", "experience", "skills", "project", "internship", "university", "bachelor", "cv", "contact"]
-        if not any(sig in resume_text.lower() for sig in resume_signals):
-            # don't be harsh — give helpful detail
-            return jsonify({"error": "Uploaded document does not look like a resume. Please upload a resume PDF."}), 400
-
-        # -----------------------
-        # Template / placeholder detection
-        # -----------------------
-        template_patterns = [
-            r"lorem ipsum", r"untitled design", r"placeholder", r"click to edit", r"your text here",
-            r"insert your", r"sample text", r"replace this", r"dummy text"
+        resume_signals = [
+            "education", "experience", "skills",
+            "project", "internship", "university",
+            "bachelor", "contact"
         ]
-        template_detected = False
-        found_patterns = []
-        for pat in template_patterns:
-            if re.search(pat, resume_text, re.IGNORECASE):
-                template_detected = True
-                found_patterns.append(pat)
 
-        # -----------------------
-        # Call the LLM (AI) with a small instruction to ignore placeholders
-        # -----------------------
+        if not any(sig in resume_text.lower() for sig in resume_signals):
+            return jsonify({
+                "error": "Uploaded document does not appear to be a valid resume."
+            }), 400
+
+        # ==========================================================
+        # ⚠ TEMPLATE / PLACEHOLDER DETECTION
+        # ==========================================================
+
+        template_patterns = [
+            r"lorem ipsum",
+            r"untitled design",
+            r"placeholder",
+            r"click to edit",
+            r"your text here",
+            r"insert your",
+            r"dummy text",
+            r"replace this"
+        ]
+
+        template_detected = any(
+            re.search(pattern, resume_text, re.IGNORECASE)
+            for pattern in template_patterns
+        )
+
+        # ==========================================================
+        # 🤖 AI EVALUATION
+        # ==========================================================
+
         prompt = f"""
 You are an ATS resume evaluator.
 
-If the resume contains placeholder/template artifacts (e.g., 'Lorem ipsum', 'Untitled design', 'Click to edit'), ignore them when forming suggestions. Do NOT generate suggestions based solely on template placeholders.
+Ignore placeholder/template artifacts like 'Lorem ipsum' if present.
 
 Analyze the resume against the job role: "{job_role}"
 
@@ -429,40 +450,47 @@ Resume:
 
         content = completion.choices[0].message.content.strip()
 
-        # Attempt to parse JSON from model output robustly
+        # Safe JSON parsing
         try:
             result = json.loads(content)
-        except Exception:
-            # Try to extract JSON substring if model wrapped text
-            import re as _re
-            m = _re.search(r"(\{[\s\S]*\})", content)
-            if m:
-                try:
-                    result = json.loads(m.group(1))
-                except Exception:
-                    return jsonify({"error": "AI returned non-JSON output", "details": "Could not parse model response"}), 500
+        except:
+            match = re.search(r"(\{[\s\S]*\})", content)
+            if match:
+                result = json.loads(match.group(1))
             else:
-                return jsonify({"error": "AI returned non-JSON output", "details": "Could not find JSON in model response"}), 500
+                return jsonify({
+                    "error": "AI returned invalid JSON response."
+                }), 500
 
-        # -----------------------
-        # Attach template warning if detected (frontend can render this)
-        # -----------------------
+        # ==========================================================
+        # 🔔 Integrate Template Notice into Suggestions
+        # ==========================================================
+
         if template_detected:
-            result.setdefault("template_warning", {})
-            result["template_warning"]["title"] = "Hidden template or placeholder text detected"
-            result["template_warning"]["detail"] = (
-                "We detected template/placeholder text (e.g., 'Lorem ipsum' or 'Untitled design') inside the uploaded PDF. "
-                "This text may be invisible in some editors but can be read by ATS systems and impact parsing. "
-                "Recommendations: open your original design (Canva/Figma/Word), remove placeholder layers, re-export as a text-based PDF, "
-                "then re-upload. You can also test by copying all text (Ctrl+A) and pasting into Notepad to see hidden content."
-            )
-            result["template_warning"]["found_patterns"] = found_patterns
+            notice = {
+                "title": "Hidden template text detected",
+                "detail": (
+                    "Hidden placeholder text (e.g., 'Lorem ipsum') was found in your PDF. "
+                    "Remove template layers and re-export a clean text-based PDF."
+                )
+            }
+
+            suggestions = result.get("suggestions", [])
+            if not any(
+                notice["title"].lower() == s.get("title", "").lower()
+                for s in suggestions
+            ):
+                suggestions.insert(0, notice)
+
+            result["suggestions"] = suggestions
 
         return jsonify(result)
 
     except Exception as e:
-        # debugging helper (remove or sanitize for production)
-        return jsonify({"error": "AI failure", "details": str(e)}), 500
+        return jsonify({
+            "error": "AI processing failed.",
+            "details": str(e)
+        }), 500
 
 # ================= RUN =================
 if __name__ == "__main__":
