@@ -256,14 +256,60 @@ Resume:
         return jsonify({"error": "AI failure", "details": str(e)}), 500
     
 # 
+# --- insert these imports at top of server.py if not already present ---
+import re
+
+# --- replace the existing ats_upload function with the following ---
 @app.route("/ai/ats-upload", methods=["POST"])
 def ats_upload():
 
     file = request.files.get("resume")
-    job_role = request.form.get("jobRole")
+    job_role = (request.form.get("jobRole") or "").strip()
 
     if not file or not job_role:
-        return jsonify({"error": "Invalid input"}), 400
+        return jsonify({"error": "Invalid input", "detail": "Missing file or job role"}), 400
+
+    # simple job-role sanity checker
+    def is_valid_job_role(role: str) -> (bool, str):
+        r = role.strip()
+        if not r:
+            return False, "Empty job role"
+
+        # must contain at least one letter
+        if not re.search(r"[A-Za-z]", r):
+            return False, "Job role should contain alphabetic characters"
+
+        # quick blacklist of obvious nonsense tokens
+        blacklist = {"asd", "asdf", "aasd", "aasddas", "qwe", "qwerty", "testtest"}
+        tokenized = re.findall(r"[A-Za-z]{2,}", r.lower())
+        if any(tok in blacklist for tok in tokenized):
+            return False, "Job role looks like random text"
+
+        # whitelist: common job-related tokens (accept instantly if present)
+        job_tokens = {
+            "developer","engineer","developer","manager","designer","analyst","intern",
+            "frontend","backend","fullstack","devops","data","software","web","mobile",
+            "product","qa","test","research","administrator","architect","consultant",
+            "security","cloud","mern","react","node","android","ios"
+        }
+        if any(tok in job_tokens for tok in tokenized):
+            return True, ""
+
+        # If role has two or more meaningful words (e.g., "Frontend Developer", "Data Analyst") accept
+        meaningful_words = [tok for tok in tokenized if len(tok) >= 3]
+        if len(meaningful_words) >= 2:
+            return True, ""
+
+        # Accept if single word but fairly descriptive (>=4 letters), e.g., "Analyst"
+        if len(meaningful_words) == 1 and len(meaningful_words[0]) >= 4:
+            return True, ""
+
+        # Otherwise it's likely to be nonsense or too vague
+        return False, "Job role looks vague or invalid. Use examples like 'Frontend Developer', 'Software Engineer', or 'Data Analyst'."
+
+    ok, reason = is_valid_job_role(job_role)
+    if not ok:
+        return jsonify({"error": "Invalid job role", "detail": reason}), 400
 
     # case-insensitive check for .pdf
     if not file.filename or not file.filename.lower().endswith(".pdf"):
@@ -276,12 +322,14 @@ def ats_upload():
             for page in pdf.pages:
                 resume_text += page.extract_text() or ""
 
-        if not resume_text.strip():
+        resume_text = resume_text.strip()
+
+        if not resume_text:
             return jsonify({
-        "error": "This PDF appears to be image-based or scanned. Please upload a text-based PDF (exported from Word or Google Docs)."
+                "error": "This PDF appears to be image-based or scanned. Please upload a text-based PDF (exported from Word or Google Docs)."
             }), 400
 
-
+        # (You can keep your existing resume validation / cleaning / prompt logic from here)
         prompt = f"""
 You are an ATS resume evaluator.
 
@@ -314,7 +362,6 @@ Resume:
     except Exception as e:
         # keep error detail to help debugging (but be careful in production)
         return jsonify({"error": "AI failure", "details": str(e)}), 500
-
 
 # ================= RUN =================
 if __name__ == "__main__":
