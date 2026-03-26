@@ -22,20 +22,8 @@ client = OpenAI(
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# ================= PROMPT FACTORY =================
-def base_rules(tone):
-    return f"""
-You are a professional resume editor.
 
-Rules:
-- Improve language only
-- Do NOT add new information
-- Do NOT change facts
-- Do NOT add headings or explanations
-- Output ONLY the rewritten content
-- Keep ATS-friendly
-- Tone: {tone if tone else "professional"}
-"""
+# ================= PROMPT FACTORY =================
 
 def build_prompt(prompt_type, payload):
     base_rules = """
@@ -55,7 +43,6 @@ STRICT RULES:
 - Keep output concise, professional, and ATS-friendly.
 """
 
-    # (unchanged prompt branches)
     if prompt_type == "summary":
         return f"""
 You are a professional resume writer.
@@ -68,7 +55,7 @@ Rules:
 - You MAY add professional context, career focus, and learning intent
 - Preserve all factual details from the user
 - Keep it ATS-friendly, concise, and professional
-- 4–6 lines maximum
+- 4-6 lines maximum
 - Output ONLY the final rewritten summary text
 
 User summary:
@@ -82,7 +69,7 @@ You are a professional resume editor.
 Rules:
 - Strictly Organize ONLY the skills explicitly provided in the input
 - Do NOT add tools as category with skill as 'git' if not provided in input
-- Do NOT add any Note 
+- Do NOT add any Note
 - Organize ONLY the provided skills into appropriate categories
 - Strictly Do NOT add, infer, or invent any skills
 - Do NOT create empty categories
@@ -111,9 +98,9 @@ Input skills:
 """
 
     if prompt_type == "project":
-         return f"""{base_rules}
+        return f"""{base_rules}
 
-Rewrite the following project description into a strong, resume-ready 2–3 concise lines.
+Rewrite the following project description into a strong, resume-ready 2-3 concise lines.
 
 STRICT RULES:
 - Improve clarity and impact only
@@ -136,7 +123,7 @@ Text:
         return f"""{base_rules}
 
 Rewrite the following work experience description into clear, resume-ready language
-in 2–3 concise lines.
+in 2-3 concise lines.
 
 STRICT RULES:
 - Improve wording and structure only
@@ -201,47 +188,345 @@ def improve():
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
-
         output = completion.choices[0].message.content.strip()
         return jsonify({"result": output})
 
     except Exception as e:
         return jsonify({"error": "AI failure", "details": str(e)}), 500
 
+
 # ================= HEALTH =================
 @app.route("/health")
 def health():
     return jsonify({"status": "ok"})
 
-# ================= ATS PROMPT =================
+
+# ================================================================
+# JOB ROLE VALIDATION
+# ================================================================
+
+_NON_JOB_WORDS = {
+    "cat", "dog", "fish", "bird", "cow", "pig", "rat", "hen", "fox",
+    "lion", "bear", "wolf", "duck", "frog", "deer", "goat", "lamb",
+    "mule", "pony", "crab", "slug", "worm", "bee", "ant", "fly",
+    "pizza", "bread", "cake", "rice", "milk", "beer", "wine", "cola",
+    "red", "blue", "green", "black", "white", "pink", "grey", "gray",
+    "hello", "world", "test", "demo", "sample", "foo", "bar", "baz",
+    "nothing", "nobody", "noone", "none", "null", "void", "undefined",
+    "asdf", "qwer", "zxcv", "qwerty", "asdfgh", "zxcvbn",
+    "asd", "aasd", "aasddas", "testtest", "abcd", "abcde", "xyz", "xyzabc",
+}
+
+_JOB_KEYWORDS = {
+    "developer", "engineer", "manager", "designer", "analyst",
+    "intern", "frontend", "backend", "fullstack", "devops",
+    "data", "software", "web", "mobile", "product", "qa",
+    "cloud", "security", "mern", "react", "node", "android", "ios",
+    "architect", "lead", "senior", "junior", "associate", "consultant",
+    "specialist", "coordinator", "director", "officer", "administrator",
+    "technician", "scientist", "researcher", "programmer", "coder",
+    "ui", "ux", "sre", "ml", "ai", "nlp", "embedded", "blockchain",
+    "cyber", "network", "database", "dba", "scrum", "agile",
+    "hr", "finance", "marketing", "sales", "content", "writer",
+    "editor", "illustrator",
+}
+
+
+def _has_excessive_consonants(token):
+    vowels = set("aeiou")
+    run = 0
+    for ch in token.lower():
+        if ch.isalpha():
+            if ch in vowels:
+                run = 0
+            else:
+                run += 1
+                if run >= 4:
+                    return True
+    return False
+
+
+def _is_gibberish_token(token):
+    t = token.lower()
+    if len(t) < 2:
+        return True
+    letters = [c for c in t if c.isalpha()]
+    if not letters:
+        return True
+    vowels = sum(1 for c in letters if c in "aeiou")
+    vowel_ratio = vowels / len(letters)
+    if vowel_ratio < 0.20 and len(t) <= 6:
+        return True
+    if re.search(r"(.)\1\1", t):
+        return True
+    if _has_excessive_consonants(t):
+        return True
+    return False
+
+
+def validate_job_role(role):
+    """Returns (is_valid: bool, reason: str). reason is '' when valid."""
+    r = role.strip()
+
+    if not r:
+        return False, "Job role cannot be empty."
+    if len(r) < 3:
+        return False, "Job role is too short. Try something like 'Frontend Developer'."
+    if len(r) > 120:
+        return False, "Job role is too long. Please keep it under 120 characters."
+    if not re.search(r"[A-Za-z]", r):
+        return False, "Job role must contain alphabetic characters."
+
+    tokens = re.findall(r"[A-Za-z]{2,}", r.lower())
+    if not tokens:
+        return False, "Job role appears to contain no recognisable words."
+
+    for tok in tokens:
+        if tok in _NON_JOB_WORDS:
+            return False, (
+                '"{}" does not look like a job role. '
+                "Try something like 'Software Engineer' or 'Data Analyst'.".format(tok)
+            )
+
+    if all(_is_gibberish_token(t) for t in tokens):
+        return False, (
+            "Job role appears to be random text. "
+            "Try something like 'Backend Developer' or 'Product Manager'."
+        )
+
+    if any(tok in _JOB_KEYWORDS for tok in tokens):
+        return True, ""
+
+    meaningful = [t for t in tokens if len(t) >= 3 and not _is_gibberish_token(t)]
+    if len(meaningful) >= 2:
+        return True, ""
+    if len(meaningful) == 1 and len(meaningful[0]) >= 5:
+        return True, ""
+
+    return False, (
+        "Job role looks too vague or unrecognised. "
+        "Try examples like 'Frontend Developer', 'Software Engineer', or 'Data Analyst'."
+    )
+
+
+# ================================================================
+# ARTIFACT / GARBAGE TEXT DETECTION
+# ================================================================
+
+_EXACT_ARTIFACT_PATTERNS = [
+    r"lorem ipsum",
+    r"untitled design",
+    r"placeholder",
+    r"click to edit",
+    r"your text here",
+    r"insert your",
+    r"dummy text",
+    r"replace this",
+    r"sample text",
+    r"edit this",
+    r"type here",
+    r"add your",
+]
+
+_BASE64_LIKE   = re.compile(r"[A-Za-z0-9+/]{30,}={0,2}")
+_CSS_HEX       = re.compile(r"#[0-9a-fA-F]{3,8}\b")
+_EMBEDDED_URL  = re.compile(r"https?://\S+")
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
+_ZERO_WIDTH    = re.compile(r"[\u200b\u200c\u200d\ufeff\u00ad]")
+
+
+def _count_garbage_tokens(text):
+    clean = _CONTROL_CHARS.sub(" ", _ZERO_WIDTH.sub("", text))
+    words = re.findall(r"\S+", clean)
+    total_words = len(words)
+    if total_words == 0:
+        return {"total_words": 0, "garbage_ratio": 1.0, "signals": ["empty"]}
+
+    signals = []
+
+    for pat in _EXACT_ARTIFACT_PATTERNS:
+        if re.search(pat, text, re.IGNORECASE):
+            signals.append("exact_phrase:{}".format(pat))
+
+    b64_hits = len(_BASE64_LIKE.findall(clean))
+    if b64_hits > 0:
+        signals.append("base64_blobs:{}".format(b64_hits))
+
+    css_hits = len(_CSS_HEX.findall(clean))
+    if css_hits > 2:
+        signals.append("css_hex:{}".format(css_hits))
+
+    ctrl_count = len(_CONTROL_CHARS.findall(text))
+    if ctrl_count > 5:
+        signals.append("control_chars:{}".format(ctrl_count))
+
+    zw_count = len(_ZERO_WIDTH.findall(text))
+    if zw_count > 3:
+        signals.append("zero_width_chars:{}".format(zw_count))
+
+    url_hits = len(_EMBEDDED_URL.findall(clean))
+    if url_hits > 2:
+        signals.append("embedded_urls:{}".format(url_hits))
+
+    garbage_token_count = 0
+    for w in words:
+        stripped = re.sub(r"[^A-Za-z0-9]", "", w)
+        if len(stripped) == 0:
+            continue
+        if stripped.isdigit():
+            continue
+        if stripped.isalpha() and len(stripped) <= 20:
+            continue
+        if len(stripped) > 12 and re.search(r"\d", stripped) and re.search(r"[A-Za-z]", stripped):
+            garbage_token_count += 1
+        if len(w) > 40:
+            garbage_token_count += 1
+
+    garbage_ratio = garbage_token_count / total_words
+    if garbage_ratio > 0.08:
+        signals.append("high_garbage_token_ratio:{:.2f}".format(garbage_ratio))
+
+    alpha_words = [w.lower() for w in words if re.sub(r"[^A-Za-z]", "", w)]
+    if len(alpha_words) > 20:
+        unique_ratio = len(set(alpha_words)) / len(alpha_words)
+        if unique_ratio < 0.35:
+            signals.append("low_lexical_density:{:.2f}".format(unique_ratio))
+
+    non_ascii = sum(1 for c in text if ord(c) > 127)
+    non_ascii_ratio = non_ascii / max(len(text), 1)
+    if non_ascii_ratio > 0.15:
+        signals.append("high_non_ascii:{:.2f}".format(non_ascii_ratio))
+
+    return {"total_words": total_words, "garbage_ratio": garbage_ratio, "signals": signals}
+
+
+def detect_artifacts(text):
+    """Returns (artifact_detected: bool, signals: list)."""
+    result = _count_garbage_tokens(text)
+    signals = result["signals"]
+    return len(signals) > 0, signals
+
+
+# ================================================================
+# RESUME STRUCTURE SANITY CHECK
+# ================================================================
+
+_RESUME_SIGNALS = [
+    "education", "experience", "skills", "project",
+    "internship", "university", "bachelor", "contact",
+    "work", "employment", "certification", "achievement",
+    "summary", "objective", "profile",
+]
+
+
+def is_plausible_resume(text):
+    lower = text.lower()
+    hits = sum(1 for sig in _RESUME_SIGNALS if sig in lower)
+    return hits >= 2
+
+
+# ================================================================
+# SAFE JSON PARSING FROM LLM OUTPUT
+# ================================================================
+
+def safe_parse_llm_json(content):
+    """
+    Extract a JSON object from LLM output that may contain prose or fences.
+    Coerces ats_score from string to int if the LLM returns "74" instead of 74.
+    Returns a dict on success, or None on failure.
+    """
+    content = content.strip()
+    content = re.sub(r"```(?:json)?", "", content).strip()
+
+    result = None
+    try:
+        result = json.loads(content)
+    except Exception:
+        pass
+
+    if result is None:
+        match = re.search(r"(\{[\s\S]*\})", content)
+        if match:
+            try:
+                result = json.loads(match.group(1))
+            except Exception:
+                pass
+
+    if result is None:
+        return None
+
+    # Coerce ats_score if returned as a string e.g. "74" or "74.0"
+    raw_score = result.get("ats_score")
+    if isinstance(raw_score, str):
+        try:
+            result["ats_score"] = int(float(raw_score))
+        except (ValueError, TypeError):
+            return None
+
+    return result
+
+
+def _safe_score(result):
+    """
+    Extract, coerce, and clamp ats_score to [0, 100].
+    Returns an int or None if missing/invalid.
+    """
+    if result is None:
+        return None
+    raw = result.get("ats_score")
+    if raw is None:
+        return None
+    try:
+        return max(0, min(100, int(float(raw))))
+    except (ValueError, TypeError):
+        return None
+
+
+# ================================================================
+# ATS ENDPOINT — AI-generated resume text
+# ================================================================
+
 @app.route("/ai/ats", methods=["POST"])
 def ats():
-    data = request.json
-    job_role = data.get("jobRole")
-    resume_text = data.get("resumeText")
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({
+            "status": "error",
+            "error_code": "BAD_REQUEST",
+            "message": "Invalid request body."
+        }), 400
 
-    if not job_role or not resume_text:
-        return jsonify({"error": "Invalid input"}), 400
+    job_role    = (data.get("jobRole")    or "").strip()
+    resume_text = (data.get("resumeText") or "").strip()
 
-    prompt = f"""
-You are an ATS resume evaluator.
+    valid, reason = validate_job_role(job_role)
+    if not valid:
+        return jsonify({
+            "status": "error",
+            "error_code": "INVALID_JOB_ROLE",
+            "message": reason
+        }), 400
 
-Analyze the resume against the job role: "{job_role}"
+    if not resume_text or len(resume_text) < 50:
+        return jsonify({
+            "status": "error",
+            "error_code": "EMPTY_RESUME",
+            "message": "Resume text is too short or empty. Please generate your resume first."
+        }), 400
 
-Return STRICT JSON ONLY in this format:
-{{
-  "ats_score": number (0-100),
-  "suggestions": [
-    {{
-      "title": "Short improvement title",
-      "detail": "Clear actionable improvement suggestion"
-    }}
-  ]
-}}
-
-Resume:
-{resume_text}
-"""
+    prompt = (
+        'You are an ATS resume evaluator.\n\n'
+        'Analyze the resume against the job role: "{}"\n\n'
+        'Return STRICT JSON ONLY — no explanation, no markdown, no preamble:\n'
+        '{{\n'
+        '  "ats_score": <integer 0-100>,\n'
+        '  "suggestions": [\n'
+        '    {{"title": "Short improvement title", '
+        '"detail": "Clear actionable suggestion. Do NOT invent skills or facts not in the resume."}}\n'
+        '  ]\n'
+        '}}\n\n'
+        'Resume:\n{}'
+    ).format(job_role, resume_text)
 
     try:
         completion = client.chat.completions.create(
@@ -249,248 +534,197 @@ Resume:
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2
         )
-
         content = completion.choices[0].message.content.strip()
-        return jsonify(json.loads(content))
+        result  = safe_parse_llm_json(content)
+        score   = _safe_score(result)
+
+        if result is None or score is None:
+            return jsonify({
+                "status": "error",
+                "error_code": "AI_PARSE_FAILURE",
+                "message": "AI returned an unexpected response. Please try again."
+            }), 500
+
+        return jsonify({
+            "status": "ok",
+            "ats_score": score,
+            "warnings": [],
+            "suggestions": result.get("suggestions") or [],
+        })
 
     except Exception as e:
-        return jsonify({"error": "AI failure", "details": str(e)}), 500
-    
-# 
-import re
-import json
-import pdfplumber
-from flask import request, jsonify
+        return jsonify({
+            "status": "error",
+            "error_code": "AI_FAILURE",
+            "message": "AI analysis failed. Please try again.",
+            "details": str(e)
+        }), 500
+
+
+# ================================================================
+# ATS ENDPOINT — PDF upload
+# ================================================================
 
 @app.route("/ai/ats-upload", methods=["POST"])
 def ats_upload():
 
-    file = request.files.get("resume")
+    file     = request.files.get("resume")
     job_role = (request.form.get("jobRole") or "").strip()
 
     if not file or not job_role:
         return jsonify({
-            "error": "Invalid input",
-            "detail": "Missing resume file or job role"
+            "status": "error",
+            "error_code": "BAD_REQUEST",
+            "message": "Missing resume file or job role."
         }), 400
 
-    # ==========================================================
-    # 🔒 STRONG JOB ROLE VALIDATION
-    # ==========================================================
-
-    def is_gibberish(text: str) -> bool:
-        letters = re.findall(r"[A-Za-z]", text)
-        if not letters:
-            return True
-
-        vowels = sum(1 for c in letters if c.lower() in "aeiou")
-        vowel_ratio = vowels / len(letters)
-
-        tokens = re.findall(r"[A-Za-z]{2,}", text.lower())
-
-        # Too few vowels + short tokens → likely nonsense
-        if vowel_ratio < 0.25 and all(len(t) < 4 for t in tokens):
-            return True
-
-        # Repeated characters like "aaaa", "xxxx"
-        if re.search(r"(.)\1\1", text):
-            return True
-
-        return False
-
-
-    def is_valid_job_role(role: str):
-        r = role.strip()
-
-        if not re.search(r"[A-Za-z]", r):
-            return False, "Job role must contain alphabetic characters."
-
-        tokens = re.findall(r"[A-Za-z]{2,}", r.lower())
-
-        if not tokens:
-            return False, "Invalid job role."
-
-        blacklist = {
-            "asd", "asdf", "aasd", "aasddas",
-            "qwe", "qwerty", "xyz", "testtest"
-        }
-
-        if any(tok in blacklist for tok in tokens):
-            return False, "Job role looks like random text."
-
-        # Known job-related keywords
-        job_keywords = {
-            "developer", "engineer", "manager", "designer",
-            "analyst", "intern", "frontend", "backend",
-            "fullstack", "devops", "data", "software",
-            "web", "mobile", "product", "qa",
-            "cloud", "security", "mern", "react",
-            "node", "android", "ios", "architect"
-        }
-
-        if any(tok in job_keywords for tok in tokens):
-            return True, ""
-
-        meaningful = [t for t in tokens if len(t) >= 3]
-
-        if len(meaningful) >= 2:
-            return True, ""
-
-        if len(meaningful) == 1 and len(meaningful[0]) >= 5:
-            return True, ""
-
-        if is_gibberish(r):
-            return False, "Job role appears to be gibberish."
-
-        return False, (
-            "Job role looks vague. Try examples like "
-            "'Frontend Developer', 'Software Engineer', or 'Data Analyst'."
-        )
-
-    valid, reason = is_valid_job_role(job_role)
+    valid, reason = validate_job_role(job_role)
     if not valid:
         return jsonify({
-            "error": "Invalid job role",
-            "detail": reason
+            "status": "error",
+            "error_code": "INVALID_JOB_ROLE",
+            "message": reason
         }), 400
 
-    # ==========================================================
-    # 📄 PDF VALIDATION
-    # ==========================================================
-
     if not file.filename or not file.filename.lower().endswith(".pdf"):
-        return jsonify({"error": "Only PDF files are allowed."}), 400
+        return jsonify({
+            "status": "error",
+            "error_code": "INVALID_FILE_TYPE",
+            "message": "Only PDF files are accepted. Please upload a .pdf file."
+        }), 400
 
+    # Defensive seek(0) — ensures the stream cursor is at the start
+    # before pdfplumber reads it, regardless of whether Flask's filename
+    # or content-type inspection moved the cursor.
     try:
+        file.stream.seek(0)
+        resume_text = ""
+        page_count  = 0
+
         with pdfplumber.open(file.stream) as pdf:
-            resume_text = ""
+            page_count = len(pdf.pages)
             for page in pdf.pages:
-                resume_text += page.extract_text() or ""
+                extracted = page.extract_text()
+                if extracted:
+                    resume_text += extracted + "\n"
 
         resume_text = resume_text.strip()
 
-        if not resume_text:
-            return jsonify({
-                "error": "This PDF appears to be image-based or scanned. "
-                         "Please upload a text-based PDF."
-            }), 400
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error_code": "PDF_PARSE_ERROR",
+            "message": "Could not read the PDF. It may be corrupted or password-protected.",
+            "details": str(e)
+        }), 400
 
-        # ==========================================================
-        # 🧠 BASIC RESUME SANITY CHECK
-        # ==========================================================
+    # Image-based PDF: pages exist but no extractable text
+    if page_count > 0 and len(resume_text) < 30:
+        return jsonify({
+            "status": "error",
+            "error_code": "IMAGE_PDF",
+            "message": (
+                "This PDF appears to be image-based or scanned. "
+                "ATS systems cannot read image PDFs. "
+                "Please upload a text-based PDF "
+                "(exported from Word, Google Docs, or a plain-text resume builder)."
+            )
+        }), 422
 
-        if len(resume_text) < 300:
-            return jsonify({
-                "error": "Resume content too short or invalid. "
-                         "Please upload a complete resume."
-            }), 400
+    # Too little text even if some was extracted
+    if len(resume_text) < 200:
+        return jsonify({
+            "status": "error",
+            "error_code": "RESUME_TOO_SHORT",
+            "message": (
+                "The extracted text is too short to analyse. "
+                "The PDF may be partially image-based or contain very little content. "
+                "Please upload a complete, text-based PDF resume."
+            )
+        }), 422
 
-        resume_signals = [
-            "education", "experience", "skills",
-            "project", "internship", "university",
-            "bachelor", "contact"
-        ]
+    # Resume structure sanity check
+    if not is_plausible_resume(resume_text):
+        return jsonify({
+            "status": "error",
+            "error_code": "NOT_A_RESUME",
+            "message": (
+                "The uploaded document does not appear to be a resume. "
+                "Please upload a resume with sections like Experience, Education, and Skills."
+            )
+        }), 422
 
-        if not any(sig in resume_text.lower() for sig in resume_signals):
-            return jsonify({
-                "error": "Uploaded document does not appear to be a valid resume."
-            }), 400
+    # Artifact / garbage text detection
+    artifact_detected, _signals = detect_artifacts(resume_text)
 
-        # ==========================================================
-        # ⚠ TEMPLATE / PLACEHOLDER DETECTION
-        # ==========================================================
+    warnings = []
+    if artifact_detected:
+        warnings.append({
+            "title": "Potential template or design artifacts detected",
+            "detail": (
+                "Hidden or garbled text was found in this PDF "
+                "(possibly from Canva, Zety, or another design tool). "
+                "ATS parsers may misread this content, lowering your actual score. "
+                "For best results, export a clean PDF directly from Word, "
+                "Google Docs, or a plain LaTeX source."
+            )
+        })
 
-        template_patterns = [
-            r"lorem ipsum",
-            r"untitled design",
-            r"placeholder",
-            r"click to edit",
-            r"your text here",
-            r"insert your",
-            r"dummy text",
-            r"replace this"
-        ]
+    artifact_note = (
+        "\nNOTE: This PDF may contain hidden template artifacts. "
+        "Ignore any garbled or non-English text below and evaluate only the real resume content.\n"
+        if artifact_detected else ""
+    )
 
-        template_detected = any(
-            re.search(pattern, resume_text, re.IGNORECASE)
-            for pattern in template_patterns
-        )
+    prompt = (
+        'You are an ATS resume evaluator.\n'
+        '{}'
+        'Analyze the resume against the job role: "{}"\n\n'
+        'Return STRICT JSON ONLY — no explanation, no markdown, no preamble:\n'
+        '{{\n'
+        '  "ats_score": <integer 0-100>,\n'
+        '  "suggestions": [\n'
+        '    {{"title": "Short improvement title", '
+        '"detail": "Clear actionable suggestion. Do NOT invent skills or facts not in the resume."}}\n'
+        '  ]\n'
+        '}}\n\n'
+        'Resume:\n{}'
+    ).format(artifact_note, job_role, resume_text)
 
-        # ==========================================================
-        # 🤖 AI EVALUATION
-        # ==========================================================
-
-        prompt = f"""
-You are an ATS resume evaluator.
-
-Ignore placeholder/template artifacts like 'Lorem ipsum' if present.
-
-Analyze the resume against the job role: "{job_role}"
-
-Return STRICT JSON ONLY in this format:
-{{
-  "ats_score": number (0-100),
-  "suggestions": [
-    {{
-      "title": "Short improvement title",
-      "detail": "Clear actionable improvement suggestion"
-    }}
-  ]
-}}
-
-Resume:
-{resume_text}
-"""
-
+    try:
         completion = client.chat.completions.create(
             model="meta-llama/Llama-3.1-8B-Instruct:novita",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2
         )
-
         content = completion.choices[0].message.content.strip()
+        result  = safe_parse_llm_json(content)
+        score   = _safe_score(result)
 
-        # Safe JSON parsing
-        try:
-            result = json.loads(content)
-        except:
-            match = re.search(r"(\{[\s\S]*\})", content)
-            if match:
-                result = json.loads(match.group(1))
-            else:
-                return jsonify({
-                    "error": "AI returned invalid JSON response."
-                }), 500
+        if result is None or score is None:
+            return jsonify({
+                "status": "error",
+                "error_code": "AI_PARSE_FAILURE",
+                "message": "AI returned an unexpected response. Please try again."
+            }), 500
 
-        # ==========================================================
-        # 🔔 Integrate Template Notice into Suggestions
-        # ==========================================================
-
-        if template_detected:
-            notice = {
-                "title": "Hidden template text detected",
-                "detail": (
-                    "Hidden placeholder text (e.g., 'Lorem ipsum') was found in your PDF. "
-                    "Remove template layers and re-export a clean text-based PDF."
-                )
-            }
-
-            suggestions = result.get("suggestions", [])
-            if not any(
-                notice["title"].lower() == s.get("title", "").lower()
-                for s in suggestions
-            ):
-                suggestions.insert(0, notice)
-
-            result["suggestions"] = suggestions
-
-        return jsonify(result)
+        return jsonify({
+            "status": "ok",
+            "pdf_type": "text",
+            "artifact_warning": artifact_detected,
+            "ats_score": score,
+            "warnings": warnings,
+            "suggestions": result.get("suggestions") or [],
+        })
 
     except Exception as e:
         return jsonify({
-            "error": "AI processing failed.",
+            "status": "error",
+            "error_code": "AI_FAILURE",
+            "message": "AI analysis failed. Please try again.",
             "details": str(e)
         }), 500
+
 
 # ================= RUN =================
 if __name__ == "__main__":
