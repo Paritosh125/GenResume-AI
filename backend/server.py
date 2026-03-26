@@ -567,164 +567,117 @@ def ats():
 
 @app.route("/ai/ats-upload", methods=["POST"])
 def ats_upload():
-
-    file     = request.files.get("resume")
+    file = request.files.get("resume")
     job_role = (request.form.get("jobRole") or "").strip()
 
     if not file or not job_role:
         return jsonify({
             "status": "error",
-            "error_code": "BAD_REQUEST",
-            "message": "Missing resume file or job role."
+            "error": "invalid_input",
+            "message": "Missing resume file or job role"
         }), 400
 
-    valid, reason = validate_job_role(job_role)
-    if not valid:
+    # ---------------- JOB ROLE VALIDATION ----------------
+    if len(job_role) < 3 or not any(c.isalpha() for c in job_role):
         return jsonify({
             "status": "error",
-            "error_code": "INVALID_JOB_ROLE",
-            "message": reason
+            "error": "invalid_job_role",
+            "message": "Please enter a valid job role (e.g., Software Engineer)"
         }), 400
 
-    if not file.filename or not file.filename.lower().endswith(".pdf"):
+    # ---------------- PDF CHECK ----------------
+    if not file.filename.lower().endswith(".pdf"):
         return jsonify({
             "status": "error",
-            "error_code": "INVALID_FILE_TYPE",
-            "message": "Only PDF files are accepted. Please upload a .pdf file."
+            "error": "invalid_file",
+            "message": "Only PDF files are allowed"
         }), 400
 
-    # Defensive seek(0) — ensures the stream cursor is at the start
-    # before pdfplumber reads it, regardless of whether Flask's filename
-    # or content-type inspection moved the cursor.
     try:
-        file.stream.seek(0)
-        resume_text = ""
-        page_count  = 0
+        import pdfplumber
 
         with pdfplumber.open(file.stream) as pdf:
-            page_count = len(pdf.pages)
-            for page in pdf.pages:
-                extracted = page.extract_text()
-                if extracted:
-                    resume_text += extracted + "\n"
+            resume_text = ""
+            for i, page in enumerate(pdf.pages):
+                text = page.extract_text()
+                if text:
+                    resume_text += text
 
         resume_text = resume_text.strip()
 
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "error_code": "PDF_PARSE_ERROR",
-            "message": "Could not read the PDF. It may be corrupted or password-protected.",
-            "details": str(e)
-        }), 400
+        # ❌ IMAGE-BASED PDF
+        if not resume_text:
+            return jsonify({
+                "status": "error",
+                "error": "image_pdf",
+                "message": "This PDF appears to be image-based or scanned.",
+                "fix": [
+                    "Export from Word or Google Docs",
+                    "Avoid scanned resumes",
+                    "Ensure text is selectable"
+                ]
+            }), 400
 
-    # Image-based PDF: pages exist but no extractable text
-    if page_count > 0 and len(resume_text) < 30:
-        return jsonify({
-            "status": "error",
-            "error_code": "IMAGE_PDF",
-            "message": (
-                "This PDF appears to be image-based or scanned. "
-                "ATS systems cannot read image PDFs. "
-                "Please upload a text-based PDF "
-                "(exported from Word, Google Docs, or a plain-text resume builder)."
-            )
-        }), 422
+        # ---------------- TEMPLATE DETECTION ----------------
+        warnings = []
 
-    # Too little text even if some was extracted
-    if len(resume_text) < 200:
-        return jsonify({
-            "status": "error",
-            "error_code": "RESUME_TOO_SHORT",
-            "message": (
-                "The extracted text is too short to analyse. "
-                "The PDF may be partially image-based or contain very little content. "
-                "Please upload a complete, text-based PDF resume."
-            )
-        }), 422
+        import re
+        if re.search(r"lorem|ipsum|placeholder|dummy", resume_text, re.I):
+            warnings.append({
+                "type": "template",
+                "title": "Hidden template text detected",
+                "detail": "Your resume contains hidden placeholder text that ATS can read.",
+                "fix": [
+                    "Remove template text in Canva/Word",
+                    "Re-export clean PDF"
+                ]
+            })
 
-    # Resume structure sanity check
-    if not is_plausible_resume(resume_text):
-        return jsonify({
-            "status": "error",
-            "error_code": "NOT_A_RESUME",
-            "message": (
-                "The uploaded document does not appear to be a resume. "
-                "Please upload a resume with sections like Experience, Education, and Skills."
-            )
-        }), 422
+        # ---------------- AI CALL ----------------
+        prompt = f"""
+Analyze this resume for ATS score for job role: {job_role}
 
-    # Artifact / garbage text detection
-    artifact_detected, _signals = detect_artifacts(resume_text)
+Return JSON:
+{{
+ "ats_score": number,
+ "suggestions": [{{"title": "...", "detail": "..."}}]
+}}
 
-    warnings = []
-    if artifact_detected:
-        warnings.append({
-            "title": "Potential template or design artifacts detected",
-            "detail": (
-                "Hidden or garbled text was found in this PDF "
-                "(possibly from Canva, Zety, or another design tool). "
-                "ATS parsers may misread this content, lowering your actual score. "
-                "For best results, export a clean PDF directly from Word, "
-                "Google Docs, or a plain LaTeX source."
-            )
-        })
+Resume:
+{resume_text}
+"""
 
-    artifact_note = (
-        "\nNOTE: This PDF may contain hidden template artifacts. "
-        "Ignore any garbled or non-English text below and evaluate only the real resume content.\n"
-        if artifact_detected else ""
-    )
-
-    prompt = (
-        'You are an ATS resume evaluator.\n'
-        '{}'
-        'Analyze the resume against the job role: "{}"\n\n'
-        'Return STRICT JSON ONLY — no explanation, no markdown, no preamble:\n'
-        '{{\n'
-        '  "ats_score": <integer 0-100>,\n'
-        '  "suggestions": [\n'
-        '    {{"title": "Short improvement title", '
-        '"detail": "Clear actionable suggestion. Do NOT invent skills or facts not in the resume."}}\n'
-        '  ]\n'
-        '}}\n\n'
-        'Resume:\n{}'
-    ).format(artifact_note, job_role, resume_text)
-
-    try:
         completion = client.chat.completions.create(
             model="meta-llama/Llama-3.1-8B-Instruct:novita",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2
         )
-        content = completion.choices[0].message.content.strip()
-        result  = safe_parse_llm_json(content)
-        score   = _safe_score(result)
 
-        if result is None or score is None:
+        import json
+        content = completion.choices[0].message.content.strip()
+
+        try:
+            result = json.loads(content)
+        except:
             return jsonify({
                 "status": "error",
-                "error_code": "AI_PARSE_FAILURE",
-                "message": "AI returned an unexpected response. Please try again."
+                "error": "ai_parse_error",
+                "message": "AI response invalid"
             }), 500
 
         return jsonify({
-            "status": "ok",
-            "pdf_type": "text",
-            "artifact_warning": artifact_detected,
-            "ats_score": score,
-            "warnings": warnings,
-            "suggestions": result.get("suggestions") or [],
+            "status": "success",
+            "ats_score": result.get("ats_score", 70),
+            "suggestions": result.get("suggestions", []),
+            "warnings": warnings
         })
 
     except Exception as e:
         return jsonify({
             "status": "error",
-            "error_code": "AI_FAILURE",
-            "message": "AI analysis failed. Please try again.",
-            "details": str(e)
+            "error": "server_error",
+            "message": str(e)
         }), 500
-
 
 # ================= RUN =================
 if __name__ == "__main__":
